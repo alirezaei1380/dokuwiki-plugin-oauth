@@ -152,6 +152,7 @@ abstract class AbstractService extends BaseAbstractService implements ServiceInt
                 )
             );
         }
+        $bearer = [];
 
         // add the token where it may be needed
         if (static::AUTHORIZATION_METHOD_HEADER_OAUTH === $this->getAuthorizationMethod()) {
@@ -166,13 +167,23 @@ abstract class AbstractService extends BaseAbstractService implements ServiceInt
             $uri->addToQuery('auth', $token->getAccessToken());
         } elseif (static::AUTHORIZATION_METHOD_HEADER_BEARER === $this->getAuthorizationMethod()) {
             $extraHeaders = array_merge(['Authorization' => 'Bearer ' . $token->getAccessToken()], $extraHeaders);
+            $bearer[] = 'Authorization: Bearer ' . $token->getAccessToken();
         } elseif (static::AUTHORIZATION_METHOD_HEADER_TOKEN === $this->getAuthorizationMethod()) {
             $extraHeaders = array_merge(array('Authorization' => 'token ' . $token->getAccessToken()), $extraHeaders);
         }
 
         $extraHeaders = array_merge($this->getExtraApiHeaders(), $extraHeaders);
-
-        return $this->httpClient->retrieveResponse($uri, $body, $extraHeaders, $method);
+        $ch = curl_init();
+        curl_setopt($ch, CURLOPT_URL, $uri);
+        curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+        if ($method === 'POST') {
+            curl_setopt($ch, CURLOPT_POST, true);
+            curl_setopt($ch, CURLOPT_POSTFIELDS, http_build_query($body, "", "&", PHP_QUERY_RFC3986));
+        }
+        curl_setopt($ch, CURLOPT_HTTPHEADER, $bearer);
+        $res = curl_exec($ch);
+        return $res;
+        // return $this->httpClient->retrieveResponse($uri, $body, $extraHeaders, $method);
     }
 
     /**
