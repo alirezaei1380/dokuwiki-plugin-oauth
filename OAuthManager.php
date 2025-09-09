@@ -184,27 +184,9 @@ class OAuthManager
         /** @var \auth_plugin_oauth */
         global $auth;
 
-        // mail is required
-        if (empty($userdata['mail'])) {
-            throw new Exception('noEmail', [$servicename]);
-        }
-
-        $userdata['mail'] = strtolower($userdata['mail']);
-
-        // mail needs to be allowed
-        /** @var \helper_plugin_oauth $hlp */
-        $hlp = plugin_load('helper', 'oauth');
-
-        if (!$hlp->checkMail($userdata['mail'])) {
-            throw new Exception('rejectedEMail', [implode(', ', $hlp->getValidDomains())]);
-        }
-
         // make username from mail if empty
         if (!isset($userdata['user'])) $userdata['user'] = '';
         $userdata['user'] = $auth->cleanUser((string)$userdata['user']);
-        if ($userdata['user'] === '') {
-            [$userdata['user']] = explode('@', $userdata['mail']);
-        }
 
         // make full name from username if empty
         if (empty($userdata['name'])) {
@@ -214,6 +196,8 @@ class OAuthManager
         // make sure groups are array and valid
         if (!isset($userdata['grps'])) $userdata['grps'] = [];
         $userdata['grps'] = array_map([$auth, 'cleanGroup'], (array)$userdata['grps']);
+
+        $userdata['mail'] = $userdata['user'];
 
         return $userdata;
     }
